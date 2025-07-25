@@ -140,9 +140,17 @@ export default function BoxDetailScreen() {
               <Text style={styles.code}>{box.code}</Text>
               <View style={[styles.roomDot, { backgroundColor: roomColor }]} />
             </View>
-            <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-              <Ionicons name="trash-outline" size={24} color={colors.destructive} />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity 
+                onPress={() => router.push(`/add-box?edit=${id}`)} 
+                style={styles.editButton}
+              >
+                <Ionicons name="pencil-outline" size={20} color={colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+                <Ionicons name="trash-outline" size={20} color={colors.destructive} />
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={styles.title}>{box.title}</Text>
           <Text style={styles.room}>{box.room}</Text>
@@ -246,6 +254,14 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editButton: {
+    padding: 8,
+    marginRight: 8,
   },
   deleteButton: {
     padding: 8,

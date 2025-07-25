@@ -92,8 +92,9 @@ export default function BoxListScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {/* Header with search and controls */}
+        {/* Header with title and search */}
         <View style={styles.header}>
+          <Text style={styles.title}>Moving Organizer</Text>
           <View style={styles.searchRow}>
             <View style={styles.searchContainer}>
               <TextInput
@@ -164,6 +165,12 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+  },
+  title: {
+    ...typography.largeTitle,
+    color: colors.text,
+    fontWeight: '700',
+    marginBottom: 20,
   },
   searchRow: {
     flexDirection: 'row',
