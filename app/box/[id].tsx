@@ -70,8 +70,17 @@ export default function BoxDetailScreen() {
   const deleteBox = async () => {
     try {
       console.log('Starting delete process for box:', id)
-      const user = await blink.auth.me()
-      console.log('User ID:', user.id)
+      
+      // First verify user is authenticated
+      let user
+      try {
+        user = await blink.auth.me()
+        console.log('User authenticated:', user.id)
+      } catch (authError) {
+        console.error('Authentication error during delete:', authError)
+        Alert.alert('Authentication Error', 'Please sign in to delete boxes.')
+        return
+      }
       
       // Delete photos first - get all photos for this box
       console.log('Fetching photos to delete...')
@@ -80,22 +89,42 @@ export default function BoxDetailScreen() {
       })
       console.log('Found photos to delete:', photosToDelete.length)
       
-      // Delete each photo
+      // Delete each photo record
       for (const photo of photosToDelete) {
-        console.log('Deleting photo:', photo.id)
-        await db.boxPhotos.delete(photo.id)
+        console.log('Deleting photo record:', photo.id)
+        try {
+          await db.boxPhotos.delete(photo.id)
+          console.log('Successfully deleted photo:', photo.id)
+        } catch (photoError) {
+          console.error('Error deleting photo:', photo.id, photoError)
+          // Continue with other photos even if one fails
+        }
+      }
+      
+      // Verify the box exists and belongs to the user before deleting
+      console.log('Verifying box ownership...')
+      const boxToDelete = await db.boxes.list({
+        where: { id: id, userId: user.id }
+      })
+      
+      if (boxToDelete.length === 0) {
+        console.error('Box not found or not owned by user')
+        Alert.alert('Error', 'Box not found or you do not have permission to delete it.')
+        return
       }
       
       // Delete the box
       console.log('Deleting box:', id)
       await db.boxes.delete(id)
+      console.log('Successfully deleted box:', id)
       
-      console.log('Delete successful, navigating back')
-      Alert.alert('Success', 'Box deleted successfully!')
-      router.back()
+      console.log('Delete process completed successfully')
+      Alert.alert('Success', 'Box deleted successfully!', [
+        { text: 'OK', onPress: () => router.back() }
+      ])
     } catch (error) {
       console.error('Error deleting box:', error)
-      Alert.alert('Error', `Failed to delete box: ${error.message}`)
+      Alert.alert('Delete Failed', `Failed to delete box: ${error.message || 'Unknown error occurred'}`)
     }
   }
 

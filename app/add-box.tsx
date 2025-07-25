@@ -85,6 +85,16 @@ export default function AddBoxScreen() {
     try {
       console.log('Starting image picker...')
       
+      // First check if user is authenticated
+      try {
+        const user = await blink.auth.me()
+        console.log('User authenticated:', user.id)
+      } catch (authError) {
+        console.error('Authentication error:', authError)
+        Alert.alert('Authentication Error', 'Please sign in to upload photos.')
+        return
+      }
+      
       // Check current permissions
       const { status: currentStatus } = await ImagePicker.getMediaLibraryPermissionsAsync()
       console.log('Current media library permission status:', currentStatus)
@@ -105,9 +115,10 @@ export default function AddBoxScreen() {
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Open Settings', onPress: () => {
-              // On iOS, this will open the app settings
               if (Platform.OS === 'ios') {
                 Linking.openURL('app-settings:')
+              } else {
+                Linking.openSettings()
               }
             }}
           ]
@@ -130,32 +141,67 @@ export default function AddBoxScreen() {
         const imageUri = result.assets[0].uri
         console.log('Selected image URI:', imageUri)
         
-        // Show loading state
-        Alert.alert('Uploading', 'Please wait while we upload your photo...')
+        setLoading(true)
         
-        // Convert to blob and upload to storage
-        const response = await fetch(imageUri)
-        const blob = await response.blob()
-        
-        const fileName = `box-photos/${Date.now()}.jpg`
-        console.log('Uploading to storage:', fileName)
-        const { publicUrl } = await blink.storage.upload(blob, fileName, { upsert: true })
-        console.log('Upload successful, URL:', publicUrl)
-        
-        setPhotos(prev => [...prev, publicUrl])
-        Alert.alert('Success', 'Photo added successfully!')
+        try {
+          // Convert URI to File object for better compatibility
+          const response = await fetch(imageUri)
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status}`)
+          }
+          
+          const blob = await response.blob()
+          console.log('Blob created, size:', blob.size, 'type:', blob.type)
+          
+          // Create a unique filename
+          const timestamp = Date.now()
+          const fileName = `box-photos/${timestamp}.jpg`
+          console.log('Uploading to storage with filename:', fileName)
+          
+          // Upload to Blink storage
+          const uploadResult = await blink.storage.upload(blob, fileName, { 
+            upsert: true 
+          })
+          
+          console.log('Upload result:', uploadResult)
+          
+          if (!uploadResult.publicUrl) {
+            throw new Error('Upload succeeded but no public URL returned')
+          }
+          
+          console.log('Upload successful, URL:', uploadResult.publicUrl)
+          
+          setPhotos(prev => [...prev, uploadResult.publicUrl])
+          Alert.alert('Success', 'Photo added successfully!')
+          
+        } catch (uploadError) {
+          console.error('Upload error:', uploadError)
+          Alert.alert('Upload Failed', `Failed to upload photo: ${uploadError.message}`)
+        }
       } else {
         console.log('Image picker was canceled or no image selected')
       }
     } catch (error) {
-      console.error('Error picking image:', error)
+      console.error('Error in pickImage:', error)
       Alert.alert('Error', `Failed to add photo: ${error.message || 'Unknown error occurred'}`)
+    } finally {
+      setLoading(false)
     }
   }
 
   const takePhoto = async () => {
     try {
       console.log('Starting camera...')
+      
+      // First check if user is authenticated
+      try {
+        const user = await blink.auth.me()
+        console.log('User authenticated:', user.id)
+      } catch (authError) {
+        console.error('Authentication error:', authError)
+        Alert.alert('Authentication Error', 'Please sign in to take photos.')
+        return
+      }
       
       // Check current permissions
       const { status: currentStatus } = await ImagePicker.getCameraPermissionsAsync()
@@ -177,9 +223,10 @@ export default function AddBoxScreen() {
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Open Settings', onPress: () => {
-              // On iOS, this will open the app settings
               if (Platform.OS === 'ios') {
                 Linking.openURL('app-settings:')
+              } else {
+                Linking.openSettings()
               }
             }}
           ]
@@ -200,26 +247,51 @@ export default function AddBoxScreen() {
         const imageUri = result.assets[0].uri
         console.log('Captured image URI:', imageUri)
         
-        // Show loading state
-        Alert.alert('Uploading', 'Please wait while we upload your photo...')
+        setLoading(true)
         
-        // Convert to blob and upload to storage
-        const response = await fetch(imageUri)
-        const blob = await response.blob()
-        
-        const fileName = `box-photos/${Date.now()}.jpg`
-        console.log('Uploading to storage:', fileName)
-        const { publicUrl } = await blink.storage.upload(blob, fileName, { upsert: true })
-        console.log('Upload successful, URL:', publicUrl)
-        
-        setPhotos(prev => [...prev, publicUrl])
-        Alert.alert('Success', 'Photo captured successfully!')
+        try {
+          // Convert URI to File object for better compatibility
+          const response = await fetch(imageUri)
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status}`)
+          }
+          
+          const blob = await response.blob()
+          console.log('Blob created, size:', blob.size, 'type:', blob.type)
+          
+          // Create a unique filename
+          const timestamp = Date.now()
+          const fileName = `box-photos/${timestamp}.jpg`
+          console.log('Uploading to storage with filename:', fileName)
+          
+          // Upload to Blink storage
+          const uploadResult = await blink.storage.upload(blob, fileName, { 
+            upsert: true 
+          })
+          
+          console.log('Upload result:', uploadResult)
+          
+          if (!uploadResult.publicUrl) {
+            throw new Error('Upload succeeded but no public URL returned')
+          }
+          
+          console.log('Upload successful, URL:', uploadResult.publicUrl)
+          
+          setPhotos(prev => [...prev, uploadResult.publicUrl])
+          Alert.alert('Success', 'Photo captured successfully!')
+          
+        } catch (uploadError) {
+          console.error('Upload error:', uploadError)
+          Alert.alert('Upload Failed', `Failed to capture photo: ${uploadError.message}`)
+        }
       } else {
         console.log('Camera was canceled or no photo taken')
       }
     } catch (error) {
-      console.error('Error taking photo:', error)
+      console.error('Error in takePhoto:', error)
       Alert.alert('Error', `Failed to take photo: ${error.message || 'Unknown error occurred'}`)
+    } finally {
+      setLoading(false)
     }
   }
 
