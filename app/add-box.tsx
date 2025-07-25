@@ -83,35 +83,35 @@ export default function AddBoxScreen() {
 
   const pickImage = async () => {
     try {
-      console.log('Starting image picker...')
+      console.log('🖼️ Starting image picker...')
       
       // First check if user is authenticated
       try {
         const user = await blink.auth.me()
-        console.log('User authenticated:', user.id)
+        console.log('✅ User authenticated:', user.id)
       } catch (authError) {
-        console.error('Authentication error:', authError)
+        console.error('❌ Authentication error:', authError)
         Alert.alert('Authentication Error', 'Please sign in to upload photos.')
         return
       }
       
       // Check current permissions
       const { status: currentStatus } = await ImagePicker.getMediaLibraryPermissionsAsync()
-      console.log('Current media library permission status:', currentStatus)
+      console.log('📱 Current media library permission status:', currentStatus)
       
       let finalStatus = currentStatus
       
       if (currentStatus !== 'granted') {
-        console.log('Requesting media library permissions...')
+        console.log('📱 Requesting media library permissions...')
         const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-        console.log('New media library permission status:', newStatus)
+        console.log('📱 New media library permission status:', newStatus)
         finalStatus = newStatus
       }
       
       if (finalStatus !== 'granted') {
         Alert.alert(
           'Permission Required', 
-          'This app needs access to your photo library to add photos to your boxes. Please enable photo library access in your device settings.',
+          'This app needs access to your iPhone photo library to add photos to your boxes. Please enable photo library access in your device settings.',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Open Settings', onPress: () => {
@@ -126,64 +126,84 @@ export default function AddBoxScreen() {
         return
       }
 
-      console.log('Launching image library...')
+      console.log('📱 Launching iPhone photo library...')
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false,
         quality: 0.8,
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: true,
+        selectionLimit: 10,
       })
 
-      console.log('Image picker result:', result)
+      console.log('📱 Image picker result:', result)
 
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const imageUri = result.assets[0].uri
-        console.log('Selected image URI:', imageUri)
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        console.log(`📸 Selected ${result.assets.length} image(s) from iPhone`)
         
         setLoading(true)
         
         try {
-          // Convert URI to File object for better compatibility
-          const response = await fetch(imageUri)
-          if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.status}`)
-          }
-          
-          const blob = await response.blob()
-          console.log('Blob created, size:', blob.size, 'type:', blob.type)
-          
-          // Create a unique filename
-          const timestamp = Date.now()
-          const fileName = `box-photos/${timestamp}.jpg`
-          console.log('Uploading to storage with filename:', fileName)
-          
-          // Upload to Blink storage
-          const uploadResult = await blink.storage.upload(blob, fileName, { 
-            upsert: true 
+          const user = await blink.auth.me()
+          const uploadPromises = result.assets.map(async (asset, index) => {
+            console.log(`📤 Uploading image ${index + 1}/${result.assets.length}:`, asset.uri)
+            
+            // Convert URI to blob with better error handling
+            const response = await fetch(asset.uri)
+            if (!response.ok) {
+              throw new Error(`Failed to fetch image ${index + 1}: ${response.status} ${response.statusText}`)
+            }
+            
+            const blob = await response.blob()
+            console.log(`📦 Blob ${index + 1} created - Size: ${(blob.size / 1024 / 1024).toFixed(2)}MB, Type: ${blob.type}`)
+            
+            // Create a unique filename with user ID for organization
+            const timestamp = Date.now()
+            const randomId = Math.random().toString(36).substring(7)
+            const fileName = `box-photos/${user.id}/${timestamp}-${index}-${randomId}.jpg`
+            console.log(`☁️ Uploading ${index + 1} to Blink storage:`, fileName)
+            
+            // Upload to Blink storage with retry logic
+            let uploadResult
+            let retries = 3
+            
+            while (retries > 0) {
+              try {
+                uploadResult = await blink.storage.upload(blob, fileName, { 
+                  upsert: true 
+                })
+                break
+              } catch (uploadError) {
+                retries--
+                console.log(`⚠️ Upload attempt failed, ${retries} retries left:`, uploadError.message)
+                if (retries === 0) throw uploadError
+                await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second before retry
+              }
+            }
+            
+            if (!uploadResult?.publicUrl) {
+              throw new Error(`Upload ${index + 1} succeeded but no public URL returned`)
+            }
+            
+            console.log(`✅ Upload ${index + 1} successful:`, uploadResult.publicUrl)
+            return uploadResult.publicUrl
           })
           
-          console.log('Upload result:', uploadResult)
+          const uploadedUrls = await Promise.all(uploadPromises)
+          console.log('🎉 All uploads completed successfully:', uploadedUrls.length, 'photos')
           
-          if (!uploadResult.publicUrl) {
-            throw new Error('Upload succeeded but no public URL returned')
-          }
-          
-          console.log('Upload successful, URL:', uploadResult.publicUrl)
-          
-          setPhotos(prev => [...prev, uploadResult.publicUrl])
-          Alert.alert('Success', 'Photo added successfully!')
+          setPhotos(prev => [...prev, ...uploadedUrls])
+          Alert.alert('Success!', `${uploadedUrls.length} photo(s) added successfully from your iPhone!`)
           
         } catch (uploadError) {
-          console.error('Upload error:', uploadError)
-          Alert.alert('Upload Failed', `Failed to upload photo: ${uploadError.message}`)
+          console.error('❌ Upload error:', uploadError)
+          Alert.alert('Upload Failed', `Failed to upload photos from iPhone: ${uploadError.message}`)
         }
       } else {
-        console.log('Image picker was canceled or no image selected')
+        console.log('❌ Image picker was canceled or no images selected')
       }
     } catch (error) {
-      console.error('Error in pickImage:', error)
-      Alert.alert('Error', `Failed to add photo: ${error.message || 'Unknown error occurred'}`)
+      console.error('❌ Error in pickImage:', error)
+      Alert.alert('Error', `Failed to access iPhone photos: ${error.message || 'Unknown error occurred'}`)
     } finally {
       setLoading(false)
     }
@@ -191,35 +211,35 @@ export default function AddBoxScreen() {
 
   const takePhoto = async () => {
     try {
-      console.log('Starting camera...')
+      console.log('📷 Starting camera...')
       
       // First check if user is authenticated
       try {
         const user = await blink.auth.me()
-        console.log('User authenticated:', user.id)
+        console.log('✅ User authenticated:', user.id)
       } catch (authError) {
-        console.error('Authentication error:', authError)
+        console.error('❌ Authentication error:', authError)
         Alert.alert('Authentication Error', 'Please sign in to take photos.')
         return
       }
       
       // Check current permissions
       const { status: currentStatus } = await ImagePicker.getCameraPermissionsAsync()
-      console.log('Current camera permission status:', currentStatus)
+      console.log('📱 Current camera permission status:', currentStatus)
       
       let finalStatus = currentStatus
       
       if (currentStatus !== 'granted') {
-        console.log('Requesting camera permissions...')
+        console.log('📱 Requesting camera permissions...')
         const { status: newStatus } = await ImagePicker.requestCameraPermissionsAsync()
-        console.log('New camera permission status:', newStatus)
+        console.log('📱 New camera permission status:', newStatus)
         finalStatus = newStatus
       }
       
       if (finalStatus !== 'granted') {
         Alert.alert(
           'Camera Permission Required', 
-          'This app needs access to your camera to take photos of your box contents. Please enable camera access in your device settings.',
+          'This app needs access to your iPhone camera to take photos of your box contents. Please enable camera access in your device settings.',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Open Settings', onPress: () => {
@@ -234,61 +254,75 @@ export default function AddBoxScreen() {
         return
       }
 
-      console.log('Launching camera...')
+      console.log('📱 Launching iPhone camera...')
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false,
         quality: 0.8,
+        exif: false,
       })
 
-      console.log('Camera result:', result)
+      console.log('📱 Camera result:', result)
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const imageUri = result.assets[0].uri
-        console.log('Captured image URI:', imageUri)
+        console.log('📸 Captured image URI:', imageUri)
         
         setLoading(true)
         
         try {
-          // Convert URI to File object for better compatibility
+          const user = await blink.auth.me()
+          
+          // Convert URI to blob with better error handling
           const response = await fetch(imageUri)
           if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.status}`)
+            throw new Error(`Failed to fetch captured image: ${response.status} ${response.statusText}`)
           }
           
           const blob = await response.blob()
-          console.log('Blob created, size:', blob.size, 'type:', blob.type)
+          console.log(`📦 Captured photo blob - Size: ${(blob.size / 1024 / 1024).toFixed(2)}MB, Type: ${blob.type}`)
           
-          // Create a unique filename
+          // Create a unique filename with user ID for organization
           const timestamp = Date.now()
-          const fileName = `box-photos/${timestamp}.jpg`
-          console.log('Uploading to storage with filename:', fileName)
+          const randomId = Math.random().toString(36).substring(7)
+          const fileName = `box-photos/${user.id}/camera-${timestamp}-${randomId}.jpg`
+          console.log('☁️ Uploading captured photo to Blink storage:', fileName)
           
-          // Upload to Blink storage
-          const uploadResult = await blink.storage.upload(blob, fileName, { 
-            upsert: true 
-          })
+          // Upload to Blink storage with retry logic
+          let uploadResult
+          let retries = 3
           
-          console.log('Upload result:', uploadResult)
+          while (retries > 0) {
+            try {
+              uploadResult = await blink.storage.upload(blob, fileName, { 
+                upsert: true 
+              })
+              break
+            } catch (uploadError) {
+              retries--
+              console.log(`⚠️ Upload attempt failed, ${retries} retries left:`, uploadError.message)
+              if (retries === 0) throw uploadError
+              await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second before retry
+            }
+          }
           
-          if (!uploadResult.publicUrl) {
+          if (!uploadResult?.publicUrl) {
             throw new Error('Upload succeeded but no public URL returned')
           }
           
-          console.log('Upload successful, URL:', uploadResult.publicUrl)
+          console.log('✅ Photo captured and uploaded successfully:', uploadResult.publicUrl)
           
           setPhotos(prev => [...prev, uploadResult.publicUrl])
-          Alert.alert('Success', 'Photo captured successfully!')
+          Alert.alert('Success!', 'Photo captured and saved successfully!')
           
         } catch (uploadError) {
-          console.error('Upload error:', uploadError)
-          Alert.alert('Upload Failed', `Failed to capture photo: ${uploadError.message}`)
+          console.error('❌ Upload error:', uploadError)
+          Alert.alert('Upload Failed', `Failed to save captured photo: ${uploadError.message}`)
         }
       } else {
-        console.log('Camera was canceled or no photo taken')
+        console.log('❌ Camera was canceled or no photo taken')
       }
     } catch (error) {
-      console.error('Error in takePhoto:', error)
+      console.error('❌ Error in takePhoto:', error)
       Alert.alert('Error', `Failed to take photo: ${error.message || 'Unknown error occurred'}`)
     } finally {
       setLoading(false)
@@ -301,15 +335,15 @@ export default function AddBoxScreen() {
 
   const showPhotoOptions = () => {
     Alert.alert(
-      'Add Photo',
-      'Choose how you want to add a photo. Photos are securely stored and synced across your devices.',
+      'Add Photos to Box',
+      'Choose how you want to add photos from your iPhone. All photos are securely stored and synced across your devices.',
       [
         { 
-          text: '📷 Take Photo', 
+          text: '📷 Take Photo with Camera', 
           onPress: takePhoto 
         },
         { 
-          text: '📱 Choose from Library', 
+          text: '📱 Choose from iPhone Photos', 
           onPress: pickImage 
         },
         { 
