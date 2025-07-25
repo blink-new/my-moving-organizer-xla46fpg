@@ -57,7 +57,7 @@ export default function RootLayout() {
     return (
       <View style={styles.authContainer}>
         <Text style={[typography.title1, { color: colors.text, marginBottom: 16, textAlign: 'center' }]}>
-          My Moving Organizer
+          Moving Organizer
         </Text>
         <Text style={[typography.body, { color: colors.textSecondary, textAlign: 'center', marginBottom: 32 }]}>
           Please sign in to organize your moving boxes
@@ -83,8 +83,7 @@ export default function RootLayout() {
         <Stack.Screen 
           name="index" 
           options={{ 
-            title: 'My Boxes',
-            headerLargeTitle: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 

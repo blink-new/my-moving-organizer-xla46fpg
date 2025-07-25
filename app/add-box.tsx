@@ -72,7 +72,7 @@ export default function AddBoxScreen() {
         orderBy: { createdAt: 'asc' }
       })
       
-      setPhotos(photosResult.map(p => p.photoUrl))
+      setPhotos(photosResult.map((p: any) => p.photoUrl))
     } catch (error) {
       console.error('Error loading box:', error)
       Alert.alert('Error', 'Failed to load box details')
@@ -83,28 +83,25 @@ export default function AddBoxScreen() {
 
   const pickImage = async () => {
     try {
-      // Check current permissions
-      const { status: currentStatus } = await ImagePicker.getMediaLibraryPermissionsAsync()
+      console.log('Starting image picker...')
       
-      let finalStatus = currentStatus
-      if (currentStatus !== 'granted') {
-        // Request permissions
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-        finalStatus = status
-      }
+      // Request permissions first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      console.log('Media library permission status:', status)
       
-      if (finalStatus !== 'granted') {
+      if (status !== 'granted') {
         Alert.alert(
           'Permission Required', 
-          'Please allow access to your photo library in Settings to add photos.',
+          'Please allow access to your photo library to add photos.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => ImagePicker.requestMediaLibraryPermissionsAsync() }
+            { text: 'Try Again', onPress: pickImage }
           ]
         )
         return
       }
 
+      console.log('Launching image library...')
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -113,69 +110,78 @@ export default function AddBoxScreen() {
         allowsMultipleSelection: false,
       })
 
+      console.log('Image picker result:', result)
+
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri
+        console.log('Selected image URI:', imageUri)
         
         // Convert to blob and upload to storage
         const response = await fetch(imageUri)
         const blob = await response.blob()
         
         const fileName = `box-photos/${Date.now()}.jpg`
+        console.log('Uploading to storage:', fileName)
         const { publicUrl } = await blink.storage.upload(blob, fileName, { upsert: true })
+        console.log('Upload successful, URL:', publicUrl)
         
         setPhotos(prev => [...prev, publicUrl])
+        Alert.alert('Success', 'Photo added successfully!')
       }
     } catch (error) {
       console.error('Error picking image:', error)
-      Alert.alert('Error', 'Failed to add photo. Please try again.')
+      Alert.alert('Error', `Failed to add photo: ${error.message}`)
     }
   }
 
   const takePhoto = async () => {
     try {
-      // Check current permissions
-      const { status: currentStatus } = await ImagePicker.getCameraPermissionsAsync()
+      console.log('Starting camera...')
       
-      let finalStatus = currentStatus
-      if (currentStatus !== 'granted') {
-        // Request permissions
-        const { status } = await ImagePicker.requestCameraPermissionsAsync()
-        finalStatus = status
-      }
+      // Request permissions first
+      const { status } = await ImagePicker.requestCameraPermissionsAsync()
+      console.log('Camera permission status:', status)
       
-      if (finalStatus !== 'granted') {
+      if (status !== 'granted') {
         Alert.alert(
           'Camera Permission Required', 
-          'Please allow access to your camera in Settings to take photos.',
+          'Please allow access to your camera to take photos.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => ImagePicker.requestCameraPermissionsAsync() }
+            { text: 'Try Again', onPress: takePhoto }
           ]
         )
         return
       }
 
+      console.log('Launching camera...')
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
       })
 
+      console.log('Camera result:', result)
+
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri
+        console.log('Captured image URI:', imageUri)
         
         // Convert to blob and upload to storage
         const response = await fetch(imageUri)
         const blob = await response.blob()
         
         const fileName = `box-photos/${Date.now()}.jpg`
+        console.log('Uploading to storage:', fileName)
         const { publicUrl } = await blink.storage.upload(blob, fileName, { upsert: true })
+        console.log('Upload successful, URL:', publicUrl)
         
         setPhotos(prev => [...prev, publicUrl])
+        Alert.alert('Success', 'Photo captured successfully!')
       }
     } catch (error) {
       console.error('Error taking photo:', error)
-      Alert.alert('Error', 'Failed to take photo. Please try again.')
+      Alert.alert('Error', `Failed to take photo: ${error.message}`)
     }
   }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet } from 'react-native'
+import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
@@ -53,6 +53,26 @@ export default function BoxListScreen() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: () => {
+            blink.auth.logout()
+          },
+        },
+      ]
+    )
   }
 
   const filteredBoxes = boxes.filter(box =>
@@ -120,6 +140,12 @@ export default function BoxListScreen() {
                 size={20} 
                 color={colors.primary} 
               />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleLogout}
+            >
+              <Ionicons name="log-out-outline" size={20} color={colors.destructive} />
             </TouchableOpacity>
           </View>
 

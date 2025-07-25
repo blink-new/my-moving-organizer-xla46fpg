@@ -35,9 +35,22 @@ export default function ScannerScreen() {
     setScanned(true)
     
     try {
-      // Check if it's our app's QR code format
-      if (data.startsWith('myorganizer://box/')) {
+      console.log('Scanned QR code data:', data)
+      
+      let boxId = null
+      
+      // Check if it's our app's web URL format
+      if (data.includes('my-moving-organizer-xla46fpg.sites.blink.new/box/')) {
+        const urlParts = data.split('/box/')
+        if (urlParts.length > 1) {
+          boxId = urlParts[1]
+          console.log('Extracted box ID from web URL:', boxId)
+        }
+      }
+      // Check if it's the old deep link format
+      else if (data.startsWith('myorganizer://box/')) {
         const boxCode = data.replace('myorganizer://box/', '')
+        console.log('Extracted box code from deep link:', boxCode)
         
         // Find the box with this code
         const user = await blink.auth.me()
@@ -49,18 +62,19 @@ export default function ScannerScreen() {
         })
         
         if (boxes.length > 0) {
-          router.replace(`/box/${boxes[0].id}`)
-        } else {
-          Alert.alert(
-            'Box Not Found',
-            `No box found with code "${boxCode}"`,
-            [{ text: 'OK', onPress: () => setScanned(false) }]
-          )
+          boxId = boxes[0].id
+          console.log('Found box ID from code:', boxId)
         }
+      }
+      
+      if (boxId) {
+        console.log('Navigating to box:', boxId)
+        router.replace(`/box/${boxId}`)
       } else {
+        console.log('No valid box found')
         Alert.alert(
-          'Invalid QR Code',
-          'This QR code is not from My Moving Organizer',
+          'Box Not Found',
+          'Could not find a box matching this QR code',
           [{ text: 'OK', onPress: () => setScanned(false) }]
         )
       }

@@ -6,13 +6,13 @@
 5 silly config load:file:/usr/local/etc/npmrc
 6 verbose title npm run lint
 7 verbose argv "run" "lint"
-8 verbose logfile logs-max:10 dir:/home/user/.npm/_logs/2025-07-25T09_46_39_459Z-
-9 verbose logfile /home/user/.npm/_logs/2025-07-25T09_46_39_459Z-debug-0.log
+8 verbose logfile logs-max:10 dir:/home/user/.npm/_logs/2025-07-25T10_20_13_916Z-
+9 verbose logfile /home/user/.npm/_logs/2025-07-25T10_20_13_916Z-debug-0.log
 10 silly logfile start cleaning logs, removing 1 files
 11 silly logfile done cleaning log files
 12 verbose cwd /home/user
 13 verbose os Linux 6.1.102
 14 verbose node v22.17.1
 15 verbose npm  v10.9.2
-16 verbose exit 1
-17 verbose code 1
+16 verbose exit 0
+17 info ok

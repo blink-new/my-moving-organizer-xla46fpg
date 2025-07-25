@@ -69,23 +69,33 @@ export default function BoxDetailScreen() {
 
   const deleteBox = async () => {
     try {
+      console.log('Starting delete process for box:', id)
       const user = await blink.auth.me()
+      console.log('User ID:', user.id)
       
-      // Delete photos first
-      const photosToDelete = await db.boxPhotos.list({
+      // Delete photos first - get all photos for this box
+      console.log('Fetching photos to delete...')
+      const photosToDelete = await (blink.db as any)['box-photos'].list({
         where: { boxId: id, userId: user.id }
       })
+      console.log('Found photos to delete:', photosToDelete.length)
+      
+      // Delete each photo
       for (const photo of photosToDelete) {
-        await db.boxPhotos.delete(photo.id)
+        console.log('Deleting photo:', photo.id)
+        await (blink.db as any)['box-photos'].delete(photo.id)
       }
       
-      // Delete box
-      await db.boxes.delete(id)
+      // Delete the box
+      console.log('Deleting box:', id)
+      await (blink.db as any).boxes.delete(id)
       
+      console.log('Delete successful, navigating back')
+      Alert.alert('Success', 'Box deleted successfully!')
       router.back()
     } catch (error) {
       console.error('Error deleting box:', error)
-      Alert.alert('Error', 'Failed to delete box')
+      Alert.alert('Error', `Failed to delete box: ${error.message}`)
     }
   }
 
@@ -128,7 +138,7 @@ export default function BoxDetailScreen() {
   }
 
   const roomColor = ROOM_COLORS[box.room as keyof typeof ROOM_COLORS]
-  const qrValue = `myorganizer://box/${box.code}`
+  const qrValue = `https://my-moving-organizer-xla46fpg.sites.blink.new/box/${box.id}`
 
   return (
     <SafeAreaView style={styles.container}>
