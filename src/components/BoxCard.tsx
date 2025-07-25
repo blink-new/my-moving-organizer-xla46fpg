@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Box, ROOM_COLORS } from '../types'
 import { router } from 'expo-router'
 import { colors } from '../styles/colors'
@@ -38,13 +38,9 @@ export function BoxCard({ box }: BoxCardProps) {
           </Text>
         </View>
         
-        {box.thumbnail && (
-          <Image
-            source={{ uri: box.thumbnail }}
-            style={styles.thumbnail}
-            resizeMode="cover"
-          />
-        )}
+        <View style={styles.thumbnailPlaceholder}>
+          <Text style={styles.thumbnailText}>📦</Text>
+        </View>
       </View>
     </TouchableOpacity>
   )
@@ -101,10 +97,15 @@ const styles = StyleSheet.create({
     ...typography.caption2,
     color: colors.textSecondary,
   },
-  thumbnail: {
+  thumbnailPlaceholder: {
     width: 64,
     height: 64,
     borderRadius: 8,
     backgroundColor: colors.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbnailText: {
+    fontSize: 24,
   },
 })

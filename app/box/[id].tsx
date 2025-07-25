@@ -75,7 +75,7 @@ export default function BoxDetailScreen() {
       
       // Delete photos first - get all photos for this box
       console.log('Fetching photos to delete...')
-      const photosToDelete = await (blink.db as any)['box-photos'].list({
+      const photosToDelete = await db.boxPhotos.list({
         where: { boxId: id, userId: user.id }
       })
       console.log('Found photos to delete:', photosToDelete.length)
@@ -83,12 +83,12 @@ export default function BoxDetailScreen() {
       // Delete each photo
       for (const photo of photosToDelete) {
         console.log('Deleting photo:', photo.id)
-        await (blink.db as any)['box-photos'].delete(photo.id)
+        await db.boxPhotos.delete(photo.id)
       }
       
       // Delete the box
       console.log('Deleting box:', id)
-      await (blink.db as any).boxes.delete(id)
+      await db.boxes.delete(id)
       
       console.log('Delete successful, navigating back')
       Alert.alert('Success', 'Box deleted successfully!')

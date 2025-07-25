@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet, Image } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, StyleSheet, Image, Platform, Linking } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -85,17 +85,31 @@ export default function AddBoxScreen() {
     try {
       console.log('Starting image picker...')
       
-      // Request permissions first
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-      console.log('Media library permission status:', status)
+      // Check current permissions
+      const { status: currentStatus } = await ImagePicker.getMediaLibraryPermissionsAsync()
+      console.log('Current media library permission status:', currentStatus)
       
-      if (status !== 'granted') {
+      let finalStatus = currentStatus
+      
+      if (currentStatus !== 'granted') {
+        console.log('Requesting media library permissions...')
+        const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+        console.log('New media library permission status:', newStatus)
+        finalStatus = newStatus
+      }
+      
+      if (finalStatus !== 'granted') {
         Alert.alert(
           'Permission Required', 
-          'Please allow access to your photo library to add photos.',
+          'This app needs access to your photo library to add photos to your boxes. Please enable photo library access in your device settings.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Try Again', onPress: pickImage }
+            { text: 'Open Settings', onPress: () => {
+              // On iOS, this will open the app settings
+              if (Platform.OS === 'ios') {
+                Linking.openURL('app-settings:')
+              }
+            }}
           ]
         )
         return
@@ -112,9 +126,12 @@ export default function AddBoxScreen() {
 
       console.log('Image picker result:', result)
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets[0]) {
         const imageUri = result.assets[0].uri
         console.log('Selected image URI:', imageUri)
+        
+        // Show loading state
+        Alert.alert('Uploading', 'Please wait while we upload your photo...')
         
         // Convert to blob and upload to storage
         const response = await fetch(imageUri)
@@ -127,10 +144,12 @@ export default function AddBoxScreen() {
         
         setPhotos(prev => [...prev, publicUrl])
         Alert.alert('Success', 'Photo added successfully!')
+      } else {
+        console.log('Image picker was canceled or no image selected')
       }
     } catch (error) {
       console.error('Error picking image:', error)
-      Alert.alert('Error', `Failed to add photo: ${error.message}`)
+      Alert.alert('Error', `Failed to add photo: ${error.message || 'Unknown error occurred'}`)
     }
   }
 
@@ -138,17 +157,31 @@ export default function AddBoxScreen() {
     try {
       console.log('Starting camera...')
       
-      // Request permissions first
-      const { status } = await ImagePicker.requestCameraPermissionsAsync()
-      console.log('Camera permission status:', status)
+      // Check current permissions
+      const { status: currentStatus } = await ImagePicker.getCameraPermissionsAsync()
+      console.log('Current camera permission status:', currentStatus)
       
-      if (status !== 'granted') {
+      let finalStatus = currentStatus
+      
+      if (currentStatus !== 'granted') {
+        console.log('Requesting camera permissions...')
+        const { status: newStatus } = await ImagePicker.requestCameraPermissionsAsync()
+        console.log('New camera permission status:', newStatus)
+        finalStatus = newStatus
+      }
+      
+      if (finalStatus !== 'granted') {
         Alert.alert(
           'Camera Permission Required', 
-          'Please allow access to your camera to take photos.',
+          'This app needs access to your camera to take photos of your box contents. Please enable camera access in your device settings.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Try Again', onPress: takePhoto }
+            { text: 'Open Settings', onPress: () => {
+              // On iOS, this will open the app settings
+              if (Platform.OS === 'ios') {
+                Linking.openURL('app-settings:')
+              }
+            }}
           ]
         )
         return
@@ -163,9 +196,12 @@ export default function AddBoxScreen() {
 
       console.log('Camera result:', result)
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets[0]) {
         const imageUri = result.assets[0].uri
         console.log('Captured image URI:', imageUri)
+        
+        // Show loading state
+        Alert.alert('Uploading', 'Please wait while we upload your photo...')
         
         // Convert to blob and upload to storage
         const response = await fetch(imageUri)
@@ -178,10 +214,12 @@ export default function AddBoxScreen() {
         
         setPhotos(prev => [...prev, publicUrl])
         Alert.alert('Success', 'Photo captured successfully!')
+      } else {
+        console.log('Camera was canceled or no photo taken')
       }
     } catch (error) {
       console.error('Error taking photo:', error)
-      Alert.alert('Error', `Failed to take photo: ${error.message}`)
+      Alert.alert('Error', `Failed to take photo: ${error.message || 'Unknown error occurred'}`)
     }
   }
 

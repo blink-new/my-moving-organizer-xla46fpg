@@ -28,26 +28,7 @@ export default function BoxListScreen() {
         orderBy: { createdAt: 'desc' }
       })
       
-      // Load thumbnail for each box
-      const boxesWithThumbnails = await Promise.all(
-        (result as Box[]).map(async (box) => {
-          try {
-            const photos = await db.boxPhotos.list({
-              where: { boxId: box.id, userId: user.id },
-              orderBy: { createdAt: 'asc' },
-              limit: 1
-            })
-            return {
-              ...box,
-              thumbnail: photos.length > 0 ? photos[0].photoUrl : null
-            }
-          } catch (error) {
-            return { ...box, thumbnail: null }
-          }
-        })
-      )
-      
-      setBoxes(boxesWithThumbnails)
+      setBoxes(result as Box[])
     } catch (error) {
       console.error('Error loading boxes:', error)
     } finally {
@@ -67,8 +48,15 @@ export default function BoxListScreen() {
         {
           text: 'Sign Out',
           style: 'destructive',
-          onPress: () => {
-            blink.auth.logout()
+          onPress: async () => {
+            try {
+              console.log('Logging out...')
+              await blink.auth.logout()
+              console.log('Logout successful')
+            } catch (error) {
+              console.error('Logout error:', error)
+              Alert.alert('Error', 'Failed to sign out. Please try again.')
+            }
           },
         },
       ]

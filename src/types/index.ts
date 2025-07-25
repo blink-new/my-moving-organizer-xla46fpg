@@ -6,7 +6,6 @@ export interface Box {
   userId: string
   createdAt: string
   updatedAt: string
-  thumbnail?: string | null
 }
 
 export interface BoxPhoto {
